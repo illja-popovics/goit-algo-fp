@@ -1,82 +1,110 @@
 import uuid
 import networkx as nx
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-from matplotlib.colors import rgb2hex
+from collections import deque
 
-class ColoredNode:
+
+class Node:
     def __init__(self, key, color="skyblue"):
-        self.val = key
-        self.color = color
-        self.id = str(uuid.uuid4())
         self.left = None
         self.right = None
+        self.val = key
+        self.color = color  # Додатковий аргумент для зберігання кольору вузла
+        self.id = str(uuid.uuid4())  # Унікальний ідентифікатор для кожного вузла
 
-def add_tree_edges(graph, node, pos, x=0, y=0, layer=1):
+def add_edges(graph, node, pos, x=0, y=0, layer=1):
     if node is not None:
-        graph.add_node(node.id, color=node.color, label=node.val)
+        graph.add_node(node.id, color=node.color, label=node.val)  # Використання id та збереження значення вузла
         if node.left:
             graph.add_edge(node.id, node.left.id)
             l = x - 1 / 2 ** layer
             pos[node.left.id] = (l, y - 1)
-            add_tree_edges(graph, node.left, pos, x=l, y=y - 1, layer=layer + 1)
+            l = add_edges(graph, node.left, pos, x=l, y=y - 1, layer=layer + 1)
         if node.right:
             graph.add_edge(node.id, node.right.id)
             r = x + 1 / 2 ** layer
             pos[node.right.id] = (r, y - 1)
-            add_tree_edges(graph, node.right, pos, x=r, y=y - 1, layer=layer + 1)
+            r = add_edges(graph, node.right, pos, x=r, y=y - 1, layer=layer + 1)
+    return graph
+def dfs_traversal(tree_root):
+    visited = set()
+    dfs_result = []
+    
+    def dfs(node):
+        if node is not None and node.id not in visited:
+            visited.add(node.id)
+            dfs_result.append(node.id)
+            dfs(node.left)
+            dfs(node.right)
+    
+    dfs(tree_root)
+    return dfs_result
 
-def depth_first_traversal(node, colors, depth=0):
-    if node is not None:
-        colors[node.id] = rgb2hex(cm.viridis(depth / 10.0))  # Adjusting scale for gradient
-        depth_first_traversal(node.left, colors, depth + 1)
-        depth_first_traversal(node.right, colors, depth + 1)
-
-def breadth_first_traversal(root, colors):
-    queue = [root]
-    depth = 0
-
+def bfs_traversal(tree_root):
+    visited = set()
+    bfs_result = []
+    queue = deque([tree_root])
+    
     while queue:
-        current_level_size = len(queue)
+        node = queue.popleft()
+        if node is not None and node.id not in visited:
+            visited.add(node.id)
+            bfs_result.append(node.id)
+            queue.append(node.left)
+            queue.append(node.right)
+    
+    return bfs_result
 
-        for i in range(current_level_size):
-            node = queue.pop(0)
-            colors[node.id] = rgb2hex(cm.viridis(depth / 10.0))  # Adjusting scale for gradient
+def draw_tree(tree_root, traversal_type):
+    if traversal_type == "BFS":
+        traversal_sequence = bfs_traversal(tree_root)
+        distances = get_distances(tree_root)
+    elif traversal_type == "DFS":
+        traversal_sequence = dfs_traversal(tree_root)
+    else:
+        raise ValueError("Invalid traversal type. Please use 'BFS' or 'DFS'.")
 
-            if node.left:
-                queue.append(node.left)
-            if node.right:
-                queue.append(node.right)
-
-        depth += 1
-
-def draw_tree_traversal(tree_root, traversal_type):
     tree = nx.DiGraph()
     pos = {tree_root.id: (0, 0)}
-    add_tree_edges(tree, tree_root, pos)
+    tree = add_edges(tree, tree_root, pos)
 
-    colors = {}
-    if traversal_type == "depth_first":
-        depth_first_traversal(tree_root, colors)
-    elif traversal_type == "breadth_first":
-        breadth_first_traversal(tree_root, colors)
+    if traversal_type == "DFS":
+        colors = [f'#{i:02x}{i:02x}{i:02x}' for i in range(0, 256, int(256/len(traversal_sequence)))]
+        node_colors = {node_id: colors[i] for i, node_id in enumerate(traversal_sequence)}
+    else:  
+        max_distance = max(distances.values())
+        colors = [f'#{i:02x}{i:02x}{i:02x}' for i in range(0, 256, int(256/(max_distance + 1)))]
+        node_colors = {node_id: colors[distances[node_id]] for node_id in traversal_sequence}
 
-    node_colors = [colors[node] for node in tree.nodes()]
-    labels = {node[0]: node[1]['label'] for node in tree.nodes(data=True)}
+    labels = {node[0]: tree.nodes[node[0]]['label'] for node in tree.nodes(data=True)}
 
     plt.figure(figsize=(8, 5))
-    nx.draw(tree, pos=pos, labels=labels, arrows=False, node_size=2500, node_color=node_colors)
+    nx.draw(tree, pos=pos, labels=labels, arrows=False, node_size=2500, node_color=list(node_colors.values()))
     plt.show()
 
-tree_root = ColoredNode(0)
-tree_root.left = ColoredNode(4)
-tree_root.left.left = ColoredNode(5)
-tree_root.left.right = ColoredNode(10)
-tree_root.right = ColoredNode(1)
-tree_root.right.left = ColoredNode(3)
+def get_distances(tree_root):
+    distances = {tree_root.id: 0}
+    queue = deque([(tree_root, 0)])
+
+    while queue:
+        node, distance = queue.popleft()
+        for neighbor in [node.left, node.right]:
+            if neighbor and neighbor.id not in distances:
+                distances[neighbor.id] = distance + 1
+                queue.append((neighbor, distance + 1))
+
+    return distances
 
 
 if __name__ == '__main__':
-    draw_tree_traversal(tree_root, "depth_first")
+    root = Node(0)
+    root.left = Node(4)
+    root.left.left = Node(5)
+    root.left.right = Node(10)
+    root.right = Node(1)
+    root.right.left = Node(3)
 
-    draw_tree_traversal(tree_root, "breadth_first")
+    # Відображення дерева
+    draw_tree(root, "DFS")
+
+    draw_tree(root, "BFS")
