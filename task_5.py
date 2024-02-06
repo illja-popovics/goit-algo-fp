@@ -58,7 +58,6 @@ def bfs_traversal(tree_root):
 def draw_tree(tree_root, traversal_type):
     if traversal_type == "BFS":
         traversal_sequence = bfs_traversal(tree_root)
-        distances = get_distances(tree_root)
     elif traversal_type == "DFS":
         traversal_sequence = dfs_traversal(tree_root)
     else:
@@ -72,9 +71,8 @@ def draw_tree(tree_root, traversal_type):
         colors = [f'#{i:02x}{i:02x}{i:02x}' for i in range(0, 256, int(256/len(traversal_sequence)))]
         node_colors = {node_id: colors[i] for i, node_id in enumerate(traversal_sequence)}
     else:  
-        max_distance = max(distances.values())
-        colors = [f'#{i:02x}{i:02x}{i:02x}' for i in range(0, 256, int(256/(max_distance + 1)))]
-        node_colors = {node_id: colors[distances[node_id]] for node_id in traversal_sequence}
+        colors = [f'#{i:02x}{i:02x}{i:02x}' for i in range(0, 256, int(256/len(traversal_sequence)))]
+        node_colors = {node_id: colors[i] for i, node_id in enumerate(traversal_sequence)}
 
     labels = {node[0]: tree.nodes[node[0]]['label'] for node in tree.nodes(data=True)}
 
