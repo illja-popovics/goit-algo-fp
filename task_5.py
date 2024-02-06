@@ -79,7 +79,7 @@ def draw_tree(tree_root, traversal_type):
     labels = {node[0]: tree.nodes[node[0]]['label'] for node in tree.nodes(data=True)}
 
     plt.figure(figsize=(8, 5))
-    nx.draw(tree, pos=pos, labels=labels, arrows=False, node_size=2500, node_color=list(node_colors.values()))
+    nx.draw(tree, pos=pos, labels=labels, arrows=False, node_size=2500, node_color=list(node_colors.values()), nodelist=traversal_sequence )
     plt.show()
 
 def get_distances(tree_root):
